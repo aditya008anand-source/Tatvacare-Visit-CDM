@@ -86,6 +86,36 @@ export async function importLeadsAction(formData: FormData) {
     return { error: "No valid rows found (every row needs at least a name)." };
   }
 
+  // Assign each new lead to whichever RM currently has the fewest leads,
+  // so the load stays balanced across the fixed RM order.
+  const { data: rms } = await supabase
+    .from("users")
+    .select("id, rm_rank")
+    .eq("role", "rm")
+    .order("rm_rank", { ascending: true });
+
+  if (rms && rms.length > 0) {
+    const { data: allRmLeads } = await supabase.from("leads").select("rm_id");
+    const counts: Record<string, number> = {};
+    for (const rm of rms) counts[rm.id] = 0;
+    for (const row of allRmLeads || []) {
+      if (row.rm_id && counts[row.rm_id] !== undefined) counts[row.rm_id]++;
+    }
+
+    for (const row of toInsert) {
+      let pick = rms[0].id;
+      let lowest = counts[pick];
+      for (const rm of rms) {
+        if (counts[rm.id] < lowest) {
+          lowest = counts[rm.id];
+          pick = rm.id;
+        }
+      }
+      (row as typeof row & { rm_id?: string }).rm_id = pick;
+      counts[pick]++;
+    }
+  }
+
   const { error: insertError } = await supabase.from("leads").insert(toInsert);
 
   if (insertError) {
