@@ -69,9 +69,14 @@ export default async function AdminHome({ searchParams }: { searchParams: Search
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Leads</h1>
-        <Link href="/admin/users" className="text-sm text-gray-500 underline">
-          Settings
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/admin/devices" className="text-sm text-gray-500 underline">
+            Bulk Device Update
+          </Link>
+          <Link href="/admin/users" className="text-sm text-gray-500 underline">
+            Settings
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -132,8 +137,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Search
           </thead>
           <tbody className="divide-y">
             {(leads || []).map((l) => (
-              <tr key={l.id}>
-                <td className="p-3 font-medium">{l.name}</td>
+              <tr key={l.id} className="hover:bg-gray-50">
+                <td className="p-3 font-medium">
+                  <Link href={`/leads/${l.id}`} className="underline">
+                    {l.name}
+                  </Link>
+                </td>
                 <td className="p-3">{l.phone || "No phone number"}</td>
                 <td className="p-3">{l.enrolment_date || "-"}</td>
                 <td className="p-3">{callCounts[l.id] || 0}</td>
