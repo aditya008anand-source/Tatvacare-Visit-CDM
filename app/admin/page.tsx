@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import LeadNameLink from "@/components/LeadNameLink";
 import UploadForm from "./leads/UploadForm";
 
-type SearchParams = Promise<{ q?: string; from?: string; to?: string; rm?: string }>;
+type SearchParams = Promise<{ q?: string; from?: string; to?: string; rm?: string; status?: string }>;
 
 function buildQuery(params: Record<string, string | undefined>) {
   const sp = new URLSearchParams();
@@ -22,7 +22,7 @@ const CARD_COLORS = [
 ];
 
 export default async function AdminHome({ searchParams }: { searchParams: SearchParams }) {
-  const { q, from, to, rm } = await searchParams;
+  const { q, from, to, rm, status } = await searchParams;
   const supabase = await createClient();
 
   const { data: authData } = await supabase.auth.getUser();
@@ -55,6 +55,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Search
   const rmNameById: Record<string, string> = {};
   for (const r of rms || []) rmNameById[r.id] = r.name || "Unnamed";
 
+  // distinct device status values actually in use, for the filter dropdown
+  const { data: statusRows } = await supabase.from("leads").select("device_status").not("device_status", "is", null);
+  const distinctStatuses = Array.from(
+    new Set((statusRows || []).map((r) => (r.device_status || "").trim()).filter(Boolean))
+  ).sort();
+
   let query = supabase
     .from("leads")
     .select("id, name, phone, enrolment_date, device_status, pincode, city, state, address_line, rm_id", {
@@ -67,6 +73,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Search
   if (to) query = query.lte("enrolment_date", to);
   if (rm === "unassigned") query = query.is("rm_id", null);
   else if (rm) query = query.eq("rm_id", rm);
+  if (status === "pending") query = query.is("device_status", null);
+  else if (status) query = query.eq("device_status", status);
 
   const { data: leads, count } = await query;
 
@@ -87,8 +95,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Search
     return parts.length ? parts.join(", ") : "Not saved";
   }
 
-  const isFiltered = Boolean(q || from || to || rm);
-  const filterQuery = { q, from, to, rm };
+  const isFiltered = Boolean(q || from || to || rm || status);
+  const filterQuery = { q, from, to, rm, status };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -135,6 +143,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Search
           {(rms || []).map((r) => (
             <option key={r.id} value={r.id}>
               {r.name || "Unnamed"}
+            </option>
+          ))}
+        </select>
+        <select name="status" defaultValue={status || ""} className="rounded border border-slate-200 px-3 py-1.5 text-sm">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending (not set)</option>
+          {distinctStatuses.map((s) => (
+            <option key={s} value={s}>
+              {s}
             </option>
           ))}
         </select>

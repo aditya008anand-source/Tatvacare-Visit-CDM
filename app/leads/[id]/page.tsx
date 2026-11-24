@@ -6,7 +6,7 @@ import AddressForm from "./AddressForm";
 import OrderForm from "./OrderForm";
 import DeviceStatusForm from "./DeviceStatusForm";
 
-type SearchParams = Promise<{ q?: string; from?: string; to?: string; rm?: string }>;
+type SearchParams = Promise<{ q?: string; from?: string; to?: string; rm?: string; status?: string }>;
 
 function buildQuery(params: Record<string, string | undefined>) {
   const sp = new URLSearchParams();
@@ -23,7 +23,7 @@ export default async function LeadDetailPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const { q, from, to, rm } = await searchParams;
+  const { q, from, to, rm, status } = await searchParams;
   const supabase = await createClient();
 
   const { data: authData } = await supabase.auth.getUser();
@@ -46,7 +46,7 @@ export default async function LeadDetailPage({
     .order("created_at", { ascending: false });
 
   const backHref = isAdmin ? "/admin" : "/rm";
-  const filterQuery = { q, from, to, rm };
+  const filterQuery = { q, from, to, rm, status };
 
   // Sidebar: the same filtered list the user came from, so they can jump between leads.
   let sidebarQuery = supabase
@@ -60,6 +60,8 @@ export default async function LeadDetailPage({
     if (to) sidebarQuery = sidebarQuery.lte("enrolment_date", to);
     if (rm === "unassigned") sidebarQuery = sidebarQuery.is("rm_id", null);
     else if (rm) sidebarQuery = sidebarQuery.eq("rm_id", rm);
+    if (status === "pending") sidebarQuery = sidebarQuery.is("device_status", null);
+    else if (status) sidebarQuery = sidebarQuery.eq("device_status", status);
   } else {
     sidebarQuery = sidebarQuery.eq("rm_id", authData.user.id);
     if (q) sidebarQuery = sidebarQuery.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
