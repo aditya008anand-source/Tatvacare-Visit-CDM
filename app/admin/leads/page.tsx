@@ -13,12 +13,30 @@ export default async function AdminLeadsPage() {
 
   const { data: leads, count } = await supabase
     .from("leads")
-    .select("id, name, phone, client, program, enrolment_date, device_status", { count: "exact" })
+    .select(
+      "id, name, phone, enrolment_date, device_status, pincode, city, state, address_line",
+      { count: "exact" }
+    )
     .order("created_at", { ascending: false })
     .limit(50);
 
+  const leadIds = (leads || []).map((l) => l.id);
+  const { data: callRows } = leadIds.length
+    ? await supabase.from("call_logs").select("lead_id").in("lead_id", leadIds)
+    : { data: [] as { lead_id: string }[] };
+
+  const callCounts: Record<string, number> = {};
+  for (const row of callRows || []) {
+    callCounts[row.lead_id] = (callCounts[row.lead_id] || 0) + 1;
+  }
+
+  function formatAddress(l: { pincode: string | null; city: string | null; state: string | null; address_line: string | null }) {
+    const parts = [l.address_line, l.city, l.state, l.pincode].filter(Boolean);
+    return parts.length ? parts.join(", ") : "Not saved";
+  }
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="mb-6 text-xl font-semibold">Leads</h1>
 
       <UploadForm />
@@ -27,18 +45,31 @@ export default async function AdminLeadsPage() {
         {count ?? 0} total lead{count === 1 ? "" : "s"} (showing latest 50)
       </p>
 
-      <div className="divide-y rounded border text-sm">
-        {(leads || []).map((l) => (
-          <div key={l.id} className="flex items-center justify-between gap-3 p-3">
-            <div>
-              <p className="font-medium">{l.name}</p>
-              <p className="text-gray-500">
-                {l.phone || "No phone number"} · {l.client} · {l.program}
-              </p>
-            </div>
-            <p className="text-gray-400">{l.enrolment_date || "-"}</p>
-          </div>
-        ))}
+      <div className="overflow-x-auto rounded border">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+            <tr>
+              <th className="p-3">Name</th>
+              <th className="p-3">Number</th>
+              <th className="p-3">Date of Joining</th>
+              <th className="p-3">Calls Attempted</th>
+              <th className="p-3">Address</th>
+              <th className="p-3">Device Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {(leads || []).map((l) => (
+              <tr key={l.id}>
+                <td className="p-3 font-medium">{l.name}</td>
+                <td className="p-3">{l.phone || "No phone number"}</td>
+                <td className="p-3">{l.enrolment_date || "-"}</td>
+                <td className="p-3">{callCounts[l.id] || 0}</td>
+                <td className="p-3 text-gray-600">{formatAddress(l)}</td>
+                <td className="p-3">{l.device_status || "Pending"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         {(!leads || leads.length === 0) && (
           <p className="p-4 text-gray-400">No leads yet.</p>
         )}
