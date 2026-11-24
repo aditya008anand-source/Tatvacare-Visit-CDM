@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { setRoleAction } from "./actions";
+import CopyLinkButton from "./CopyLinkButton";
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -26,7 +28,21 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 text-xl font-semibold">Users</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Settings</h1>
+        <Link href="/admin" className="text-sm text-gray-500 underline">
+          Back to Leads
+        </Link>
+      </div>
+
+      <div className="mb-8 rounded border p-4">
+        <p className="mb-2 text-sm font-medium">Registration link</p>
+        <p className="mb-3 text-sm text-gray-500">
+          Share this with anyone who should request access. They register, then you approve
+          them and assign a role below.
+        </p>
+        <CopyLinkButton path="/register" />
+      </div>
 
       <h2 className="mb-2 text-sm font-medium text-gray-500">
         Pending approval ({pending.length})
