@@ -84,11 +84,10 @@ export async function updateAddressAction(formData: FormData) {
   return { success: true };
 }
 
-export async function updateDeviceAction(formData: FormData) {
+export async function updateOrderDetailsAction(formData: FormData) {
   const leadId = String(formData.get("leadId"));
   const orderId = String(formData.get("orderId") || "").trim();
   const awb = String(formData.get("awb") || "").trim();
-  const deviceStatus = String(formData.get("deviceStatus") || "").trim();
 
   const access = await canAccessLead(leadId);
   if (!access.ok) return { error: "Not allowed." };
@@ -98,8 +97,28 @@ export async function updateDeviceAction(formData: FormData) {
     .update({
       order_id: orderId || null,
       awb: awb || null,
-      device_status: deviceStatus || null,
     })
+    .eq("id", leadId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/leads/${leadId}`);
+  return { success: true };
+}
+
+// Separate from order details on purpose: device status can change days or
+// weeks after the order was placed, and shouldn't require re-entering the
+// order ID/AWB to update.
+export async function updateDeviceStatusAction(formData: FormData) {
+  const leadId = String(formData.get("leadId"));
+  const deviceStatus = String(formData.get("deviceStatus") || "").trim();
+
+  const access = await canAccessLead(leadId);
+  if (!access.ok) return { error: "Not allowed." };
+
+  const { error } = await access.supabase
+    .from("leads")
+    .update({ device_status: deviceStatus || null })
     .eq("id", leadId);
 
   if (error) return { error: error.message };
