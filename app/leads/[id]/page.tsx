@@ -97,8 +97,12 @@ export default async function LeadDetailPage({
 
       <div className="flex-1">
         <h1 className="mb-1 text-xl font-semibold">{lead.name}</h1>
-        <p className="mb-6 text-sm text-gray-500">
-          {lead.phone || "No phone number"} · {lead.client} · {lead.program}
+        <p className="mb-1 text-sm text-gray-500">
+          {lead.phone || "No phone number"} · {lead.program}
+        </p>
+        <p className="mb-6 text-sm">
+          <span className="text-gray-500">Client: </span>
+          <span className="font-medium text-gray-800">{lead.client || "Not specified"}</span>
         </p>
 
         <div className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
